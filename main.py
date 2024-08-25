@@ -61,13 +61,21 @@ val_loader = DataLoader(val_healthy, batch_size=batch_size, shuffle=False)
 test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
 
 #Testing 2nd dataset
-dataset_folder = 'data/TwoLeadECG/'
-testPath = os.path.join(dataset_folder, 'TwoLeadECG_TEST.txt')
+#dataset_folder = 'data/TwoLeadECG/'
+#testPath = os.path.join(dataset_folder, 'TwoLeadECG_TEST.txt')
+dataset_folder = 'data/ECG200/'
+testPath = os.path.join(dataset_folder, 'test.txt')
 test_data2 = pd.read_csv(testPath, header=None, delim_whitespace=True)
 test_data2 = ECGDataset(test_data2.values)
 test_loader2 = DataLoader(test_data2, batch_size=batch_size, shuffle=True)
 print("DataLoader instances created")
-    
+
+
+#plot test_loader2 
+data = test_loader2.dataset[3][0]
+plt.plot(data)
+plt.show()
+print("DataLoader instances created")
 
 class ecgnet(nn.Module):
     def __init__(self):
@@ -77,9 +85,9 @@ class ecgnet(nn.Module):
         self.lstm1 = nn.LSTM(1, 128,batch_first=True)
         self.lstm2 = nn.LSTM(128, 64,batch_first=True)
         self.lstm3 = nn.LSTM(64, 32,batch_first=True)
-        
-        self.fc1 = nn.Linear(32, 32)
+        self.lstm33 = nn.LSTM(32,16,batch_first=True)
         #decoder
+        self.lstm44 = nn.LSTM(16, 32,batch_first=True)
         self.lstm4 = nn.LSTM(32, 64,batch_first=True)
         self.lstm5 = nn.LSTM(64, 128,batch_first=True)
         self.lstm6 = nn.LSTM(128, 1,batch_first=True)
@@ -98,12 +106,17 @@ class ecgnet(nn.Module):
         x = self.relu(x)
         x = self.dropout(x)
         
+        x, _ = self.lstm3(x)
+        x= self.relu(x)#del
+        x= self.dropout(x)#del
+        x,(hn,cn) = self.lstm33(x)#del
+
         
-        x, (hn,cn) = self.lstm3(x)
-        hn = self.fc1(hn[-1])
-        hn = hn.unsqueeze(1).repeat(1, x.size(1), 1)
+        #latent space 
+        hn = hn.repeat(1, x.size(1), 1)#repeating the hidden state across all timesteps
         x = hn
         #decoder
+        x, _= self.lstm44(x)#del
         x, _ = self.lstm4(x)
         x = self.relu(x)
         x = self.dropout(x)
@@ -111,17 +124,17 @@ class ecgnet(nn.Module):
         x, _ = self.lstm5(x)
         x = self.relu(x)
         x = self.dropout(x)
-        
         x, _ = self.lstm6(x)
+        
         return x
     
     
-epochs = 200
+epochs = 100
 model = ecgnet()
 device = torch.device('cuda')
 model = model.to(device)
 
-criterion = nn.L1Loss()#sum
+criterion = nn.L1Loss(reduction='sum')#sum
 
 optimizer = optim.Adam(model.parameters(), lr=0.001)
 outp = []
@@ -144,7 +157,6 @@ def train(model, train_loader, val_loader, epochs, criterion, optimizer, device)
             train_loss += loss.item()
             outp.append(output)
             inp.append(data)
-            #print(loss.item())
         train_loss /= len(train_loader)   
         train_losses.append(train_loss)             
         val_loss = 0
@@ -161,7 +173,7 @@ def train(model, train_loader, val_loader, epochs, criterion, optimizer, device)
         val_loss /= len(val_loader)
         val_losses.append(val_loss)
         
-        if epoch % 199 == 0:#using this for debugging -----------------------
+        if epoch % 99 == 0:#using this for debugging -----------------------
             with torch.no_grad():
                 model.eval()
                 data = test_loader.dataset[100][0].unsqueeze(0).unsqueeze(-1).to(device)
@@ -197,7 +209,7 @@ def train(model, train_loader, val_loader, epochs, criterion, optimizer, device)
                 plt.show()
                 #----------------------------------------------------------------
         print("Epoch: " +  str(epoch) + " Training loss: " + str(train_loss) + " Validation loss: " + str(val_loss))
-    torch.save(model.state_dict(), 'model.pth')
+    torch.save(model.state_dict(), 'modell.pth')
     torch.save(model, 'model.pth')
     #plot train_losses and val_losses on same graph
     plt.plot(train_losses, label='Training Loss')
@@ -208,7 +220,7 @@ def train(model, train_loader, val_loader, epochs, criterion, optimizer, device)
     plt.show()
     
       
-train(model, train_loader, val_loader, epochs, criterion, optimizer, device)
+#train(model, train_loader, val_loader, epochs, criterion, optimizer, device)
 
 
 def autothreshold(losses):
@@ -217,12 +229,10 @@ def autothreshold(losses):
     return threshol
 
 def visualize_histogram_with_threshold(losses, num_bins=256):
-    hist, bin_edges = np.histogram(losses, bins=num_bins, range=(min(losses), max(losses)), density=True)
     threshold = autothreshold(losses)
     plt.figure(figsize=(10, 6))
     plt.hist(losses, bins=num_bins, range=(min(losses), max(losses)), density=True, alpha=0.75, color='blue', label='Losses Histogram')
     plt.axvline(threshold, color='red', linestyle='--', linewidth=2, label=f'Threshold: {threshold:.2f}')
-
     plt.xlabel('Losses')
     plt.ylabel('Density')
     plt.title('Histogram of Losses with Optimal Threshold')
