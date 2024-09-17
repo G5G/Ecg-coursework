@@ -60,11 +60,11 @@ unhealthy_data = np.column_stack((y_main, X_main))
 
 train_unh_labels = train_unh[:, 0]
 train_unh_data = train_unh[:, 1:]
-R_T_ind = np.where(train_unh_labels == 2)[0]  # Indices of R-T samples
+PVC_ind = np.where(train_unh_labels == 2)[0]  # Indices of PVC samples
 other_ind = np.where(train_unh_labels != 2)[0]  # Indices of all other classes
-R_T_keep = 40  # Number of R-T samples to keep
-R_T_ind_sub = np.random.choice(R_T_ind, R_T_keep, replace=False)  # Randomly select R-T samples
-tmp_ind = np.concatenate((R_T_ind_sub, other_ind))
+PVC_keep = 40  # Number of PVC samples to keep
+PVC_ind_sub = np.random.choice(PVC_ind, PVC_keep, replace=False)  # Randomly select PVC samples
+tmp_ind = np.concatenate((PVC_ind_sub, other_ind))
 reduced_train_unh_data = train_unh_data[tmp_ind]
 reduced_train_unh_labels = train_unh_labels[tmp_ind]
 train_unh = np.column_stack((reduced_train_unh_labels, reduced_train_unh_data))
@@ -136,7 +136,7 @@ for i in unhealthy_dataset.labels:
     elif i == 5:
         d += 1
 
-print("Unhealthy_dataset:  R-T = ",a, " PVC = ",b," SB or EB = ",c," FVN = ",d)
+print("Unhealthy_dataset:  PVC = ",a, " R-T = ",b," SB or EB = ",c," FVN = ",d)
 a,b,c,d = (0,0,0,0)
 for i in train_unh.labels:
     if i == 2:
@@ -154,7 +154,7 @@ w1 = total/(b*4)
 w2 = total/(c*4)
 w3 = total/(d*4)
 
-print("unhealthy train:  R-T = ",a, " PVC = ",b," SB or EB = ",c," FVN = ",d)
+print("unhealthy train:  PVC = ",a, " R-T = ",b," SB or EB = ",c," FVN = ",d)
 a,b,c,d = (0,0,0,0)
 for i in val_unh.labels:
     if i == 2:
@@ -167,7 +167,7 @@ for i in val_unh.labels:
         d += 1
 
 
-print("unhealthy val:  R-T = ",a, " PVC = ",b," SB or EB = ",c," FVN = ",d)
+print("unhealthy val:  PVC = ",a, " R-T = ",b," SB or EB = ",c," FVN = ",d)
 a,b,c,d = (0,0,0,0)
 for i in test_unh.labels:
     if i == 2:
@@ -179,7 +179,7 @@ for i in test_unh.labels:
     elif i == 5:
         d += 1
 
-print("unhealthy test:  R-T = ",a, " PVC = ",b," SB or EB = ",c," FVN = ",d)
+print("unhealthy test:  PVC = ",a, " R-T = ",b," SB or EB = ",c," FVN = ",d)
 
 num_healthy_train = 2101
 num_healthy_val = 234
@@ -187,9 +187,9 @@ num_healthy_test = 584
 
 
 #Unhealthy data meaning:
-#R-on-T premature ventricular contraction 1767 samples [2]--identifier used within the dataset
-#Premature Ventricular Contraction 96 samples [3]--identifier used within the dataset
-#Supraventricular Premature or Ectopic beat 196 samples [4]--identifier used within the dataset
+#PVC premature ventricular contraction 1767 samples [2]--identifier used within the dataset
+#R on T Premature Ventricular Contraction 96 samples [3]--identifier used within the dataset
+#Supraventricular Premature or Ectopic beat 194 samples [4]--identifier used within the dataset
 #Fusion of ventricular and Normal Beat 24 samples [5]--identifier used within the dataset
 train_healthy, val_healthy, test_healthy = random_split(healthy_dataset, [num_healthy_train, num_healthy_val, num_healthy_test])
 test_dataset = ConcatDataset([test_healthy, unhealthy_dataset])
@@ -548,7 +548,7 @@ def test2(model, testloader):
         labels = np.concatenate(labels, axis=0)
         predictions = np.concatenate(predictions, axis=0)
         confusion = confusion_matrix(labels, predictions)
-        classes = ['R-T', 'PVC', 'SB/EB', 'FVN']
+        classes = ['PVC', 'R-T', 'SB/EB', 'FVN']
         plt.matshow(confusion)
         plt.colorbar()
         plt.ylabel('True label')
@@ -651,7 +651,7 @@ def test3(model,model2,test_loader,criterion):
             predictions2 = np.array(predictions2).flatten()  
             confusion = confusion_matrix(labels2, predictions2)
             plt.matshow(confusion)
-            classes = ['R-T', 'PVC', 'SB/EB', 'FVN', 'Healthy']
+            classes = ['PVC', 'R-T', 'SB/EB', 'FVN', 'Healthy']
             plt.colorbar()
             plt.ylabel('True label')
             plt.xlabel('Predicted label')
